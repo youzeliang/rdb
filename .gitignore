@@ -1,0 +1,44 @@
+# idea ignore
+.idea/
+.idea
+*.ipr
+*.iml
+*.iws
+
+
+# maven ignore
+target/
+*.jar
+!.mvn/wrapper/*
+*.war
+*.zip
+*.tar
+*.tar.gz
+
+# temp ignore
+*.log
+*.cache
+*.diff
+*.patch
+*.tmp
+
+
+# system ignore
+.DS_Store
+Thumbs.db
+*.orig
+
+
+/target/
+!.mvn/wrapper/maven-wrapper.jar
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+
