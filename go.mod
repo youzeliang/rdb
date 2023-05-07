@@ -1,4 +1,4 @@
-module github.com/youzeliang/rdb
+module rdb
 
 go 1.17
 
