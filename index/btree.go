@@ -2,7 +2,7 @@ package index
 
 import (
 	"github.com/google/btree"
-	"github.com/youzeliang/rdb/data"
+	"rdb/data"
 	"sync"
 )
 
