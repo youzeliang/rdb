@@ -2,9 +2,9 @@ package index
 
 import (
 	"github.com/google/btree"
+	"github.com/stretchr/testify/assert"
 	"rdb/data"
 	"reflect"
-	"sync"
 	"testing"
 )
 
@@ -38,135 +38,49 @@ func TestItem_Less(t *testing.T) {
 }
 
 func TestBTree_Delete(t *testing.T) {
-	type fields struct {
-		tree *btree.BTree
-		lock *sync.RWMutex
-	}
-	type args struct {
-		key []byte
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			bt := &BTree{
-				tree: tt.fields.tree,
-				lock: tt.fields.lock,
-			}
-			if got := bt.Delete(tt.args.key); got != tt.want {
-				t.Errorf("Delete() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	bt := NewBTree()
+	res1 := bt.Put(nil, &data.LogRecordPos{Fid: 1, Offset: 100})
+	assert.True(t, res1)
+
+	res2 := bt.Delete(nil)
+	assert.True(t, res2)
+
+	res3 := bt.Put([]byte("aa"), &data.LogRecordPos{Fid: 10, Offset: 20})
+	assert.True(t, res3)
+
+	res4 := bt.Delete([]byte("aa"))
+	assert.True(t, res4)
+
 }
 
 func TestBTree_Get(t *testing.T) {
-	type fields struct {
-		tree *btree.BTree
-		lock *sync.RWMutex
-	}
-	type args struct {
-		key []byte
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   *data.LogRecordPos
-	}{
-		{
-			name: "Test Get with non-existing key",
-			fields: fields{
-				tree: btree.New(2),
-				lock: &sync.RWMutex{},
-			},
-			args: args{
-				key: []byte("test-key"),
-			},
-			want: nil,
-		},
-		{
-			name: "Test Get with existing key",
-			fields: fields{
-				tree: btree.New(2),
-				lock: &sync.RWMutex{},
-			},
-			args: args{
-				key: []byte("test-key1"),
-			},
-			want: &data.LogRecordPos{Fid: 1, Offset: 0},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			bt := &BTree{
-				tree: tt.fields.tree,
-				lock: tt.fields.lock,
-			}
-			if got := bt.Get(tt.args.key); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Get() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	bt := NewBTree()
+
+	res1 := bt.Put(nil, &data.LogRecordPos{Fid: 1, Offset: 100})
+	assert.True(t, res1)
+
+	pos1 := bt.Get(nil)
+	assert.Equal(t, uint32(1), pos1.Fid)
+	assert.Equal(t, int64(100), pos1.Offset)
+
+	res2 := bt.Put([]byte("a"), &data.LogRecordPos{Fid: 1, Offset: 2})
+	assert.True(t, res2)
+	res3 := bt.Put([]byte("a"), &data.LogRecordPos{Fid: 1, Offset: 3})
+	assert.True(t, res3)
+
+	pos2 := bt.Get([]byte("a"))
+	t.Log(pos2)
 }
 
 func TestBTree_Put(t *testing.T) {
-	type fields struct {
-		tree *btree.BTree
-		lock *sync.RWMutex
-	}
-	type args struct {
-		key []byte
-		pos *data.LogRecordPos
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   bool
-	}{
-		{
-			name: "Test Put with non-existing key",
-			fields: fields{
-				tree: btree.New(2),
-				lock: &sync.RWMutex{},
-			},
-			args: args{
-				key: []byte("test-key"),
-				pos: &data.LogRecordPos{Fid: 1, Offset: 0},
-			},
-			want: true,
-		},
-		{
-			name: "Test Put with existing key",
-			fields: fields{
-				tree: btree.New(2),
-				lock: &sync.RWMutex{},
-			},
-			args: args{
-				key: []byte("test-key"),
-				pos: &data.LogRecordPos{Fid: 1, Offset: 0},
-			},
-			want: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			bt := &BTree{
-				tree: tt.fields.tree,
-				lock: tt.fields.lock,
-			}
-			if got := bt.Put(tt.args.key, tt.args.pos); got != tt.want {
-				t.Errorf("Put() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	bt := NewBTree()
+
+	res1 := bt.Put(nil, &data.LogRecordPos{Fid: 1, Offset: 100})
+	assert.True(t, res1)
+
+	res2 := bt.Put([]byte("a"), &data.LogRecordPos{Fid: 1, Offset: 2})
+	assert.True(t, res2)
+
 }
 
 func TestItem_Less1(t *testing.T) {
