@@ -12,14 +12,16 @@ type BTree struct {
 	lock *sync.RWMutex
 }
 
+// NewBTree create a new btree
 func NewBTree() *BTree {
 	return &BTree{
-		tree: btree.New(32),
+		tree: btree.New(32), // Limit the number of leaf nodes 32.
 		lock: new(sync.RWMutex),
 	}
 }
 
 func (bt *BTree) Put(key []byte, pos *data.LogRecordPos) bool {
+
 	it := &Item{key: key, pos: pos}
 	bt.lock.Lock()
 	bt.tree.ReplaceOrInsert(it)
