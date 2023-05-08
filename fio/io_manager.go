@@ -2,17 +2,17 @@ package fio
 
 const DataFilePerm = 0644
 
-// IOManager 抽象 IO 管理接口，可以接入不同的 IO 类型，目前支持标准文件 IO
+// IOManager Abstract IO management interface that can be integrated with different types of IO, currently supporting standard file IO.
 type IOManager interface {
-	// Read 从文件的给定位置读取对应的数据
+	// Read corresponding data from a given position in a file
 	Read([]byte, int64) (int, error)
 
-	// Write 写入字节数组到文件中
+	// Write a byte array to a file
 	Write([]byte) (int, error)
 
-	// Sync 持久化数据
+	// Sync persisting data
 	Sync() error
 
-	// Close 关闭文件
+	// Close
 	Close() error
 }
