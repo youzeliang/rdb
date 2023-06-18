@@ -1,19 +1,61 @@
 package rdb
 
 import (
+	"errors"
+	"io"
+	"io/ioutil"
+	"os"
 	"rdb/data"
 	"rdb/index"
+	"sort"
+	"strconv"
+	"strings"
 	"sync"
 )
 
-// DB bitcask db
+// DB bitcask 存储引擎实例
 type DB struct {
 	options    Options
 	mu         *sync.RWMutex
+	fileIds    []int                     // 文件 id，只能在加载索引的时候使用，不能在其他的地方更新和使用
 	activeFile *data.DataFile            // 当前活跃数据文件，可以用于写入
 	OlderFiles map[uint32]*data.DataFile // 旧的数据文件。只能用于读
-	indexer    index.Indexer             // 内存索引
+	index      index.Indexer             // 内存索引
 
+}
+
+func Open(options Options) (*DB, error) {
+	// 对用户传入的配置项进行校验
+	if err := checkOptions(options); err != nil {
+		return nil, err
+	}
+
+	// 判断数据目录是否存在，如果不存在的话，则创建这个目录
+
+	if _, err := os.Stat(options.DirPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(options.DirPath, os.ModePerm); err != nil {
+			return nil, err
+		}
+	}
+
+	// 初始化 DB 实例结构体
+
+	db := &DB{
+		options:    options,
+		mu:         new(sync.RWMutex),
+		OlderFiles: make(map[uint32]*data.DataFile),
+		index:      index.NewIndexer(options.IndexType),
+	}
+
+	// 加载数据文件
+	if err := db.loadDataFiles(); err != nil {
+		return nil, err
+	}
+
+	if err := db.loadIndexFromDataFile(); err != nil {
+		return nil, err
+	}
+	return db, nil
 }
 
 // Put 写入Key/Value 数据, key 不能为空
@@ -38,12 +80,47 @@ func (db *DB) Put(key []byte, value []byte) error {
 
 	// 更新内存索引
 
-	if ok := db.indexer.Put(key, pos); !ok {
-		return ErrIndexUpdate
+	if ok := db.index.Put(key, pos); !ok {
+		return ErrIndexUpdateFailed
 	}
 
 	return nil
 
+}
+
+func (db *DB) Delete(key []byte) error {
+
+	// 判断 key 是否为空
+
+	if len(key) == 0 {
+		return ErrKeyIsEmpty
+	}
+
+	// 先检测 key 是否存在，如果不存在，则直接返回
+
+	if pos := db.index.Get(key); pos == nil {
+		return nil
+	}
+
+	// 构造 LogRecord，标识其是被删除的
+	logRecord := &data.LogRecord{
+		Key:  key,
+		Type: data.LogRecordDeleted,
+	}
+
+	// 写入到数据文件中去
+
+	_, err := db.appendLogRecord(*logRecord)
+	if err != nil {
+		return err
+	}
+
+	ok := db.index.Delete(key)
+	if !ok {
+		return ErrIndexUpdateFailed
+	}
+
+	return nil
 }
 
 func (db *DB) Get(key []byte) ([]byte, error) {
@@ -54,7 +131,7 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 	}
 
 	// 从内存索引中获取数据文件的位置信息
-	logRecordPos := db.indexer.Get(key)
+	logRecordPos := db.index.Get(key)
 	// 如果内存索引中没有，则说明key不存在
 	if logRecordPos == nil {
 		return nil, ErrKeyNotFound
@@ -76,7 +153,7 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 	}
 
 	// 根据偏移读取对应的数据
-	logRecord, err := dataFile.ReadLogRecord(logRecordPos.Offset)
+	logRecord, _, err := dataFile.ReadLogRecord(logRecordPos.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -164,4 +241,126 @@ func (db *DB) setActivityDataFile() error {
 
 	return nil
 
+}
+
+// 从磁盘中加载索引
+func (db *DB) loadDataFiles() error {
+
+	dirEntries, err := ioutil.ReadDir(db.options.DirPath)
+	if err != nil {
+		return err
+	}
+
+	var fileIds []int
+
+	for _, dirEntry := range dirEntries {
+
+		if strings.HasPrefix(dirEntry.Name(), data.DataFileNameSuffix) {
+			splitNames := strings.Split(dirEntry.Name(), ".")
+			fileId, err := strconv.Atoi(splitNames[0])
+			// 数据目录有可能被损坏
+			if err != nil {
+				return ErrDataFileNotFound
+			}
+			fileIds = append(fileIds, fileId)
+		}
+	}
+
+	// 对文件id进行排序, 从小到大依次加载
+
+	sort.Ints(fileIds)
+
+	db.fileIds = fileIds
+
+	// 遍历每个文件id, 打开对应的数据文件
+
+	for i, fid := range fileIds {
+		dataFile, err := data.OpenDataFile(db.options.DirPath, uint32(fid))
+		if err != nil {
+			return err
+		}
+
+		// 最后一个，id是最大的，说明是当前活跃文件
+		if i == len(fileIds)-1 {
+			db.activeFile = dataFile
+		} else {
+			db.OlderFiles[uint32(fid)] = dataFile
+		}
+	}
+
+	return nil
+}
+
+// 从数据文件中加载索引，遍历文件中的所有记录，并更新到内存索引中
+
+func (db *DB) loadIndexFromDataFile() error {
+
+	// 没有文件，说明数据库是空的，直接返回
+	if len(db.fileIds) == 0 {
+		return nil
+	}
+
+	// 遍历所有文件id，处理文件中的记录
+
+	for i, fid := range db.fileIds {
+
+		var fileId = uint32(fid)
+		var dataFile *data.DataFile
+
+		if fileId == db.activeFile.FileId {
+			dataFile = db.activeFile
+		} else {
+			dataFile = db.OlderFiles[fileId]
+		}
+
+		var offset int64 = 0
+
+		for {
+
+			logRecord, size, err := dataFile.ReadLogRecord(offset)
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				return err
+			}
+
+			// 构造内存索引并保存
+			logRecordPos := &data.LogRecordPos{
+				Fid:    fileId,
+				Offset: offset,
+			}
+
+			if logRecord.Type == data.LogRecordDeleted {
+				db.index.Delete(logRecord.Key)
+			} else {
+				db.index.Put(logRecord.Key, logRecordPos)
+			}
+
+			// 递增offset，下一次从新的位置开始读取
+
+			offset += size
+
+		}
+
+		// 如果是当前活跃文件，更新这个文件的 WriteOff
+
+		if i == len(db.fileIds)-1 {
+			db.activeFile.WriteOff = offset
+		}
+
+	}
+
+	return nil
+}
+
+func checkOptions(options Options) error {
+	if options.DirPath == "" {
+		return errors.New("database dir path is empty")
+	}
+
+	if options.DataFileSize <= 0 {
+		return errors.New("database data file size must be greater than 0")
+	}
+	return nil
 }
