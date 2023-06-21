@@ -25,6 +25,7 @@ func (fio *FileIO) Read(b []byte, offect int64) (int, error) {
 
 func (fio *FileIO) Write(b []byte) (int, error) {
 	return fio.fd.Write(b)
+
 }
 
 func (fio *FileIO) Sync() error {
@@ -33,4 +34,14 @@ func (fio *FileIO) Sync() error {
 
 func (fio *FileIO) Close() error {
 	return fio.fd.Close()
+}
+
+func (fio *FileIO) Size() (int64, error) {
+	stat, err := fio.fd.Stat()
+	if err != nil {
+		return 0, err
+	}
+
+	return stat.Size(), nil
+
 }

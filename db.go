@@ -66,7 +66,7 @@ func (db *DB) Put(key []byte, value []byte) error {
 
 	// 构造 LogRecord 结构体
 
-	logRecord := data.LogRecord{
+	logRecord := &data.LogRecord{
 		Key:   key,
 		Value: value,
 		Type:  data.LogRecordNormal,
@@ -110,7 +110,7 @@ func (db *DB) Delete(key []byte) error {
 
 	// 写入到数据文件中去
 
-	_, err := db.appendLogRecord(*logRecord)
+	_, err := db.appendLogRecord(logRecord)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 }
 
 // 追加写入到当前活跃数据文件中
-func (db *DB) appendLogRecord(logRecord data.LogRecord) (*data.LogRecordPos, error) {
+func (db *DB) appendLogRecord(logRecord *data.LogRecord) (*data.LogRecordPos, error) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
@@ -180,7 +180,7 @@ func (db *DB) appendLogRecord(logRecord data.LogRecord) (*data.LogRecordPos, err
 	}
 
 	// 写入数据编码
-	enRecord, size := data.EncodeLodRecord(logRecord)
+	enRecord, size := data.EncodeLogRecord(logRecord)
 
 	// 如果写入的数据已经到达了活跃文件的最大值，则关闭活跃文件，并打开新的文件
 
@@ -253,6 +253,7 @@ func (db *DB) loadDataFiles() error {
 
 	var fileIds []int
 
+	// 遍历数据目录，找到所有以 .data 结尾的数据文件
 	for _, dirEntry := range dirEntries {
 
 		if strings.HasPrefix(dirEntry.Name(), data.DataFileNameSuffix) {
