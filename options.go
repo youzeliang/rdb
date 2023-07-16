@@ -1,4 +1,4 @@
-package rdb
+package main
 
 type Options struct {
 
