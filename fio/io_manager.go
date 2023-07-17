@@ -15,4 +15,13 @@ type IOManager interface {
 
 	// Close
 	Close() error
+
+	// Size 获取到文件大小
+	Size() (int64, error)
+}
+
+// 初始化IOManager，目前只支持标准 FileIO
+
+func NewIOManager(fileName string) (IOManager, error) {
+	return NewFileIOManager(fileName)
 }

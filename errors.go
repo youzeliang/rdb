@@ -2,7 +2,10 @@ package main
 
 import "errors"
 
-var ErrKeyIsEmpty = errors.New("key is empty")
-var ErrIndexUpdate = errors.New("index update error")
-var ErrKeyNotFound = errors.New("key not found")
-var ErrDataFileNotFound = errors.New("data file not found")
+var (
+	ErrKeyIsEmpty             = errors.New("the key is empty")
+	ErrIndexUpdateFailed      = errors.New("failed to update index")
+	ErrKeyNotFound            = errors.New("key not found in database")
+	ErrDataFileNotFound       = errors.New("data file is not found")
+	ErrDataDirectoryCorrupted = errors.New("the database directory maybe corrupted")
+)
