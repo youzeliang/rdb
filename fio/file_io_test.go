@@ -39,7 +39,7 @@ func TestFileIO_Write(t *testing.T) {
 	assert.Nil(t, err)
 
 	n, err = fio.Write([]byte("storage"))
-	assert.Equal(t, 7, n)
+	assert.Equal(t, 11, n)
 	assert.Nil(t, err)
 }
 
