@@ -6,7 +6,6 @@ type FileIO struct {
 	fd *os.File // system file descriptor
 }
 
-// NewFileIOManager
 func NewFileIOManager(fileName string) (*FileIO, error) {
 	fd, err := os.OpenFile(fileName,
 		os.O_CREATE|os.O_RDWR|os.O_APPEND, DataFilePerm)
