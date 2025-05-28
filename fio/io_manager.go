@@ -13,14 +13,12 @@ type IOManager interface {
 	// Sync persisting data
 	Sync() error
 
-	// Close
+	// Close the file
 	Close() error
 
-	// Size 获取到文件大小
+	// Size get the size of the file
 	Size() (int64, error)
 }
-
-// 初始化IOManager，目前只支持标准 FileIO
 
 func NewIOManager(fileName string) (IOManager, error) {
 	return NewFileIOManager(fileName)

@@ -1,4 +1,4 @@
-package main
+package rdb
 
 import (
 	"errors"
@@ -253,13 +253,12 @@ func (db *DB) loadDataFiles() error {
 
 	var fileIds []int
 
-	// 遍历数据目录，找到所有以 .data 结尾的数据文件
+	// 遍历传入的配置路径下的数据目录，找到所有以 .data 结尾的数据文件
 	for _, dirEntry := range dirEntries {
-
 		if strings.HasPrefix(dirEntry.Name(), data.DataFileNameSuffix) {
 			splitNames := strings.Split(dirEntry.Name(), ".")
 			fileId, err := strconv.Atoi(splitNames[0])
-			// 数据目录有可能被损坏
+			// 防止数据目录有可能被损坏
 			if err != nil {
 				return ErrDataFileNotFound
 			}
@@ -267,7 +266,7 @@ func (db *DB) loadDataFiles() error {
 		}
 	}
 
-	// 对文件id进行排序, 从小到大依次加载
+	// 这里对文件id进行排序, 从小到大依次加载
 
 	sort.Ints(fileIds)
 
@@ -281,7 +280,7 @@ func (db *DB) loadDataFiles() error {
 			return err
 		}
 
-		// 最后一个，id是最大的，说明是当前活跃文件
+		// 最后一个，id是最大的，前面排过序了，说明是当前活跃文件
 		if i == len(fileIds)-1 {
 			db.activeFile = dataFile
 		} else {

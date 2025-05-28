@@ -30,16 +30,17 @@ func TestFileIO_Write(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, fio)
 
+	// 测试写入空数据
 	n, err := fio.Write([]byte(""))
 	assert.Equal(t, 0, n)
 	assert.Nil(t, err)
 
-	n, err = fio.Write([]byte("bitcask kv"))
-	assert.Equal(t, 10, n)
+	n, err = fio.Write([]byte("write kv"))
+	assert.Equal(t, 8, n)
 	assert.Nil(t, err)
 
-	n, err = fio.Write([]byte("storage"))
-	assert.Equal(t, 11, n)
+	n, err = fio.Write([]byte("storage kv"))
+	assert.Equal(t, 10, n)
 	assert.Nil(t, err)
 }
 
