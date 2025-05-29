@@ -14,6 +14,15 @@ type Options struct {
 
 	// 索引类型
 	IndexType IndexerType
+
+	// 启动时是否使用 MMap 加载数据
+	MMapAtStartup bool
+
+	// 累计写到多少字节后进行持久化
+	BytesPerSync uint
+
+	//	数据文件合并的阈值
+	FileMergeRatio float32
 }
 
 type IndexerType = int8

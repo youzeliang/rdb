@@ -23,20 +23,25 @@ type DataFile struct {
 }
 
 // OpenDataFile 打开新的数据文件
-func OpenDataFile(dirPath string, fileId uint32) (*DataFile, error) {
-	fileName := filepath.Join(fmt.Sprintf("%09d", fileId) + DataFileNameSuffix)
+func OpenDataFile(dirPath string, fileId uint32, ioType fio.FileIOType) (*DataFile, error) {
+	fileName := GetDataFileName(dirPath, fileId)
+	return newDataFile(fileName, fileId, ioType)
+}
 
-	ioManager, err := fio.NewIOManager(fileName)
+func GetDataFileName(dirPath string, fileId uint32) string {
+	return filepath.Join(dirPath, fmt.Sprintf("%09d", fileId)+DataFileNameSuffix)
+}
+
+func newDataFile(fileName string, fileId uint32, ioType fio.FileIOType) (*DataFile, error) {
+	ioManager, err := fio.NewIOManager(fileName, ioType)
 	if err != nil {
 		return nil, err
 	}
-
 	return &DataFile{
 		FileId:    fileId,
 		WriteOff:  0,
 		IoManager: ioManager,
 	}, nil
-
 }
 
 func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, int64, error) {

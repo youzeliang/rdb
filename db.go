@@ -3,9 +3,9 @@ package rdb
 import (
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"rdb/data"
+	"rdb/fio"
 	"rdb/index"
 	"sort"
 	"strconv"
@@ -19,8 +19,9 @@ type DB struct {
 	mu         *sync.RWMutex
 	fileIds    []int                     // 文件 id，只能在加载索引的时候使用，不能在其他的地方更新和使用
 	activeFile *data.DataFile            // 当前活跃数据文件，可以用于写入
-	OlderFiles map[uint32]*data.DataFile // 旧的数据文件。只能用于读
 	index      index.Indexer             // 内存索引
+	olderFiles map[uint32]*data.DataFile // 旧的数据文件，只能用于读
+	bytesWrite uint                      // 累计写了多少个字节
 
 }
 
@@ -43,7 +44,7 @@ func Open(options Options) (*DB, error) {
 	db := &DB{
 		options:    options,
 		mu:         new(sync.RWMutex),
-		OlderFiles: make(map[uint32]*data.DataFile),
+		olderFiles: make(map[uint32]*data.DataFile),
 		index:      index.NewIndexer(options.IndexType),
 	}
 
@@ -144,7 +145,7 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 	if db.activeFile.FileId == logRecordPos.Fid {
 		dataFile = db.activeFile
 	} else {
-		dataFile = db.OlderFiles[logRecordPos.Fid]
+		dataFile = db.olderFiles[logRecordPos.Fid]
 	}
 
 	// 数据文件为空
@@ -166,125 +167,122 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 	return logRecord.Value, nil
 }
 
-// 追加写入到当前活跃数据文件中
+// 追加写数据到活跃文件中
 func (db *DB) appendLogRecord(logRecord *data.LogRecord) (*data.LogRecordPos, error) {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-
 	// 判断当前活跃数据文件是否存在，因为数据库在没有写入的时候是没有文件生成的
-
+	// 如果为空则初始化数据文件
 	if db.activeFile == nil {
-		if err := db.setActivityDataFile(); err != nil {
+		if err := db.setActiveDataFile(); err != nil {
 			return nil, err
 		}
 	}
 
 	// 写入数据编码
-	enRecord, size := data.EncodeLogRecord(logRecord)
-
-	// 如果写入的数据已经到达了活跃文件的最大值，则关闭活跃文件，并打开新的文件
-
+	encRecord, size := data.EncodeLogRecord(logRecord)
+	// 如果写入的数据已经到达了活跃文件的阈值，则关闭活跃文件，并打开新的文件
 	if db.activeFile.WriteOff+size > db.options.DataFileSize {
-
-		// 先持久化数据文件，保证已有的数据持久到磁盘中去
+		// 先持久化数据文件，保证已有的数据持久到磁盘当中
 		if err := db.activeFile.Sync(); err != nil {
 			return nil, err
 		}
 
-		// 当前活跃文件转化为久的数据文件
-		db.OlderFiles[db.activeFile.FileId] = db.activeFile
+		// 当前活跃文件转换为旧的数据文件
+		db.olderFiles[db.activeFile.FileId] = db.activeFile
 
 		// 打开新的数据文件
-		if err := db.setActivityDataFile(); err != nil {
+		if err := db.setActiveDataFile(); err != nil {
 			return nil, err
 		}
 	}
 
 	writeOff := db.activeFile.WriteOff
-	if err := db.activeFile.Write(enRecord); err != nil {
+	if err := db.activeFile.Write(encRecord); err != nil {
 		return nil, err
 	}
 
+	db.bytesWrite += uint(size)
 	// 根据用户配置决定是否持久化
-	if db.options.SyncWrite {
+	var needSync = db.options.SyncWrite
+	if !needSync && db.options.BytesPerSync > 0 && db.bytesWrite >= db.options.BytesPerSync {
+		needSync = true
+	}
+	if needSync {
 		if err := db.activeFile.Sync(); err != nil {
 			return nil, err
 		}
+		// 清空累计值
+		if db.bytesWrite > 0 {
+			db.bytesWrite = 0
+		}
 	}
 
-	pos := &data.LogRecordPos{
-		Fid:    db.activeFile.FileId,
-		Offset: writeOff,
-	}
-
+	// 构造内存索引信息
+	pos := &data.LogRecordPos{Fid: db.activeFile.FileId, Offset: writeOff, Size: uint32(size)}
 	return pos, nil
 }
 
 // 设置当前活跃文件
 // 在访问此方法前必须持有互斥锁
-func (db *DB) setActivityDataFile() error {
-
-	var initialFaileId uint32 = 0
+func (db *DB) setActiveDataFile() error {
+	var initialFileId uint32 = 0
 
 	if db.activeFile != nil {
-		initialFaileId = db.activeFile.FileId + 1
+		initialFileId = db.activeFile.FileId + 1
 	}
 
-	// 打开新的数据文件
-
-	dataFile, err := data.OpenDataFile(db.options.DirPath, initialFaileId)
+	// 打开新的数据文件,这里的目录从配置项取,数据库启动的时候
+	dataFile, err := data.OpenDataFile(db.options.DirPath, initialFileId, fio.StandardFIO)
 	if err != nil {
 		return err
 	}
-
 	db.activeFile = dataFile
 
 	return nil
-
 }
 
-// 从磁盘中加载索引
+// loadDataFiles 读取数据目录下的所有文件
 func (db *DB) loadDataFiles() error {
 
-	dirEntries, err := ioutil.ReadDir(db.options.DirPath)
+	// 读取数据目录下的所有文件
+	files, err := os.ReadDir(db.options.DirPath)
 	if err != nil {
 		return err
 	}
 
 	var fileIds []int
 
-	// 遍历传入的配置路径下的数据目录，找到所有以 .data 结尾的数据文件
-	for _, dirEntry := range dirEntries {
-		if strings.HasPrefix(dirEntry.Name(), data.DataFileNameSuffix) {
-			splitNames := strings.Split(dirEntry.Name(), ".")
+	for _, file := range files {
+		// 判断文件是否以 .data 结尾
+		if strings.HasSuffix(file.Name(), data.DataFileNameSuffix) {
+			// 100.data 需要拿到文件id
+			splitNames := strings.Split(file.Name(), ".")
 			fileId, err := strconv.Atoi(splitNames[0])
-			// 防止数据目录有可能被损坏
+			// 数据目录有可能被损坏了
 			if err != nil {
-				return ErrDataFileNotFound
+				return ErrDataDirectoryCorrupted
 			}
 			fileIds = append(fileIds, fileId)
 		}
 	}
 
-	// 这里对文件id进行排序, 从小到大依次加载
-
+	//	对文件 id 进行排序，从小到大依次加载
 	sort.Ints(fileIds)
-
 	db.fileIds = fileIds
 
-	// 遍历每个文件id, 打开对应的数据文件
-
+	// 遍历每个文件id，打开对应的数据文件
 	for i, fid := range fileIds {
-		dataFile, err := data.OpenDataFile(db.options.DirPath, uint32(fid))
+		var ioType = fio.StandardFIO
+		if db.options.MMapAtStartup {
+			ioType = fio.MemoryMap
+		}
+		dataFile, err := data.OpenDataFile(db.options.DirPath, uint32(fid), ioType)
 		if err != nil {
 			return err
 		}
-
-		// 最后一个，id是最大的，前面排过序了，说明是当前活跃文件
-		if i == len(fileIds)-1 {
+		if i == len(fileIds)-1 { // 最后一个，id是最大的，说明是当前活跃文件
 			db.activeFile = dataFile
-		} else {
-			db.OlderFiles[uint32(fid)] = dataFile
+		} else { // 说明是旧的数据文件
+			db.olderFiles[uint32(fid)] = dataFile
 		}
 	}
 
@@ -310,7 +308,7 @@ func (db *DB) loadIndexFromDataFile() error {
 		if fileId == db.activeFile.FileId {
 			dataFile = db.activeFile
 		} else {
-			dataFile = db.OlderFiles[fileId]
+			dataFile = db.olderFiles[fileId]
 		}
 
 		var offset int64 = 0
@@ -358,9 +356,11 @@ func checkOptions(options Options) error {
 	if options.DirPath == "" {
 		return errors.New("database dir path is empty")
 	}
-
 	if options.DataFileSize <= 0 {
 		return errors.New("database data file size must be greater than 0")
+	}
+	if options.FileMergeRatio < 0 || options.FileMergeRatio > 1 {
+		return errors.New("invalid merge ratio, must between 0 and 1")
 	}
 	return nil
 }

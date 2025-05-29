@@ -3,40 +3,42 @@ package fio
 import "os"
 
 type FileIO struct {
-	fd *os.File // system file descriptor
+	fd *os.File // System file descriptor
 }
 
-func NewFileIOManager(fileName string) (*FileIO, error) {
-	fd, err := os.OpenFile(fileName,
-		os.O_CREATE|os.O_RDWR|os.O_APPEND, DataFilePerm)
+func NewFileIOManager(path string) (*FileIO, error) {
+	fd, err := os.OpenFile(path,
+		os.O_CREATE|os.O_RDWR|os.O_APPEND,
+		DataFilePerm,
+	)
 	if err != nil {
 		return nil, err
 	}
+	return &FileIO{fd: fd}, nil
 
-	return &FileIO{
-		fd: fd,
-	}, nil
 }
 
-func (fio *FileIO) Read(b []byte, offset int64) (int, error) {
-	return fio.fd.ReadAt(b, offset)
+// Read 从文件的给定位置读取对应的数据
+func (fi *FileIO) Read(b []byte, offset int64) (int, error) {
+	return fi.fd.ReadAt(b, offset)
 }
 
-func (fio *FileIO) Write(b []byte) (int, error) {
-	return fio.fd.Write(b)
+func (fi *FileIO) Write(b []byte) (int, error) {
+	return fi.fd.Write(b)
 }
 
-func (fio *FileIO) Sync() error {
-	return fio.fd.Sync()
+func (fi *FileIO) Sync() error {
+	return fi.fd.Sync()
 }
 
-func (fio *FileIO) Close() error {
-	return fio.fd.Close()
+func (fi *FileIO) Close() error {
+
+	return fi.fd.Close()
 }
 
-// Size Get the size of the file
-func (fio *FileIO) Size() (int64, error) {
-	stat, err := fio.fd.Stat()
+// Size 获取到文件大小
+func (fi *FileIO) Size() (int64, error) {
+	stat, err := fi.fd.Stat()
 	if err != nil {
 		return 0, err
 	}
