@@ -11,14 +11,14 @@ import (
 	"time"
 )
 
-var db *rdbrdb.DB
+var db *rdb.DB
 
 func init() {
 	//	初始化用于基准测试的 DB 实例
 	var err error
-	options := rdbrdb.DefaultOptions
+	options := rdb.DefaultOptions
 	options.DirPath = "/tmp/bitcask-go-bench"
-	db, err = rdbrdb.Open(options)
+	db, err = rdb.Open(options)
 	if err != nil {
 		panic(fmt.Sprintf("failed to open db: %v", err))
 	}
@@ -44,7 +44,7 @@ func Benchmark_Get(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		_, err := db.Get(utils.GetTestKey(rand.Int()))
-		if err != nil && !errors.Is(err, rdbrdb.ErrKeyNotFound) {
+		if err != nil && !errors.Is(err, rdb.ErrKeyNotFound) {
 			b.Fatal(err)
 		}
 	}

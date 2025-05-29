@@ -4,11 +4,6 @@ import (
 	"strconv"
 )
 
-func Float64FromBytes(bytes []byte) float64 {
-	val, _ := strconv.ParseFloat(string(bytes), 64)
-	return val
-}
-
 func FloatFromBytes(val []byte) float64 {
 	f, _ := strconv.ParseFloat(string(val), 64)
 	return f

@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -11,31 +10,17 @@ import (
 
 // DirSize 获取一个目录的大小
 func DirSize(dirPath string) (int64, error) {
-
-	// 首先检查目录是否存在
-	dirInfo, err := os.Stat(dirPath)
-	if err != nil {
-		return 0, fmt.Errorf("failed to access directory: %w", err)
-	}
-	if !dirInfo.IsDir() {
-		return 0, fmt.Errorf("%s is not a directory", dirPath)
-	}
-
-	var totalSize int64
-	err = filepath.Walk(dirPath, func(path string, info fs.FileInfo, err error) error {
+	var size int64
+	err := filepath.Walk(dirPath, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if !info.IsDir() {
-			totalSize += info.Size()
+			size += info.Size()
 		}
 		return nil
 	})
-	if err != nil {
-		return 0, fmt.Errorf("error walking directory: %w", err)
-	}
-
-	return totalSize, err
+	return size, err
 }
 
 // AvailableDiskSize 获取磁盘剩余可用空间大小
@@ -55,7 +40,7 @@ func AvailableDiskSize() (uint64, error) {
 func CopyDir(src, dest string, exclude []string) error {
 	// 目标目标不存在则创建
 	if _, err := os.Stat(dest); os.IsNotExist(err) {
-		if err = os.MkdirAll(dest, os.ModePerm); err != nil {
+		if err := os.MkdirAll(dest, os.ModePerm); err != nil {
 			return err
 		}
 	}

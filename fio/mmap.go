@@ -5,46 +5,39 @@ import (
 	"os"
 )
 
-// MMap IO，内存文件映射
+// MMap (Memory Map a File) IO 类型
 type MMap struct {
 	readerAt *mmap.ReaderAt
 }
 
 func NewMMapIOManager(fileName string) (*MMap, error) {
-
 	_, err := os.OpenFile(fileName, os.O_CREATE, DataFilePerm)
 	if err != nil {
 		return nil, err
 	}
-
 	readerAt, err := mmap.Open(fileName)
 	if err != nil {
 		return nil, err
 	}
-
-	return &MMap{
-		readerAt: readerAt,
-	}, nil
+	return &MMap{readerAt: readerAt}, nil
 }
 
-func (m *MMap) Sync() error {
-	// MMap does not support Sync operation
-	return nil
+func (mmap *MMap) Read(b []byte, offset int64) (int, error) {
+	return mmap.readerAt.ReadAt(b, offset)
 }
 
-func (m *MMap) Write(b []byte) (int, error) {
-	// MMap does not support Write operation
-	return 0, nil
+func (mmap *MMap) Write([]byte) (int, error) {
+	panic("not implemented")
 }
 
-func (m *MMap) Size() (int64, error) {
-	return int64(m.readerAt.Len()), nil
+func (mmap *MMap) Sync() error {
+	panic("not implemented")
 }
 
-func (m *MMap) Read(b []byte, offset int64) (int, error) {
-	return m.readerAt.ReadAt(b, offset)
+func (mmap *MMap) Close() error {
+	return mmap.readerAt.Close()
 }
 
-func (m *MMap) Close() error {
-	return m.readerAt.Close()
+func (mmap *MMap) Size() (int64, error) {
+	return int64(mmap.readerAt.Len()), nil
 }

@@ -2,6 +2,8 @@ package fio
 
 import "os"
 
+// FileIO 标准系统文件 IO
+
 type FileIO struct {
 	fd *os.File // System file descriptor
 }
