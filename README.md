@@ -84,7 +84,7 @@ value, err := db.Get([]byte("key"))
 err = db.Delete([]byte("key"))
 
 // Batch write
-batch := db.NewWriteBatch(rdbrdb.DefaultWriteBatchOptions)
+batch := db.NewWriteBatch(rdb.DefaultWriteBatchOptions)
 batch.Put([]byte("key1"), []byte("value1"))
 batch.Put([]byte("key2"), []byte("value2"))
 err = batch.Commit()
