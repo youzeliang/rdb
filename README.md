@@ -66,9 +66,9 @@ type Options struct {
 
 ```go
 // Open database
-options := rdbrdb.DefaultOptions
+options := rdb.DefaultOptions
 options.DirPath = "/tmp/rdb"
-db, err := rdbrdb.Open(options)
+db, err := rdb.Open(options)
 if err != nil {
     panic(err)
 }
