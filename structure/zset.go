@@ -28,7 +28,7 @@ func (rds *RedisDataStructure) ZAdd(key []byte, score float64, member []byte) (b
 		exist = false
 	}
 
-	wb := rds.db.NewWriteBatch(rdb.DefaultWriteBatchOptions)
+	wb := rds.db.NewWriteBatch(rdb.DefaultWriteBatchConfigs)
 	if !exist {
 		meta.size++
 		_ = wb.Put(key, meta.encode())

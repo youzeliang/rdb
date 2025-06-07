@@ -2,6 +2,7 @@ package utils
 
 import (
 	"github.com/stretchr/testify/assert"
+	"log"
 	"os"
 	"testing"
 )
@@ -15,6 +16,7 @@ func TestDirSize(t *testing.T) {
 
 func TestAvailableDiskSize(t *testing.T) {
 	size, err := AvailableDiskSize()
+	log.Println(size)
 	assert.Nil(t, err)
 	assert.True(t, size > 0)
 }

@@ -16,9 +16,9 @@ var db *rdb.DB
 func init() {
 	//	初始化用于基准测试的 DB 实例
 	var err error
-	options := rdb.DefaultOptions
-	options.DirPath = "/tmp/bitcask-go-bench"
-	db, err = rdb.Open(options)
+	configs := rdb.DefaultOptions
+	configs.DirPath = "/tmp/bitcask-go-bench"
+	db, err = rdb.Open(configs)
 	if err != nil {
 		panic(fmt.Sprintf("failed to open db: %v", err))
 	}

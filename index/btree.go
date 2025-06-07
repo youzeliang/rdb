@@ -133,6 +133,7 @@ func (bt *BTree) Get(key []byte) *data.Position {
 	return btreeItem.(*Item).pos
 }
 
+// Delete 返回的是旧的value, 如果不存在则返回nil, true
 func (bt *BTree) Delete(key []byte) (*data.Position, bool) {
 	it := &Item{key: key}
 	bt.lock.Lock()

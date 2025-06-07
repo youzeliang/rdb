@@ -3,29 +3,29 @@ package main
 import (
 	"github.com/tidwall/redcon"
 	"github.com/youzeliang/rdb"
-	"github.com/youzeliang/rdb/redis"
+	st "github.com/youzeliang/rdb/structure"
 	"log"
 	"sync"
 )
 
-const addr = "127.0.0.1:6380"
+const addr = "127.0.0.1:6381"
 
 type BitcaskServer struct {
-	dbs    map[int]*redis.RedisDataStructure
+	dbs    map[int]*st.RedisDataStructure
 	server *redcon.Server
 	mu     sync.RWMutex
 }
 
 func main() {
 	// 打开 Redis 数据结构服务
-	redisDataStructure, err := redis.NewRedisDataStructure(rdb.DefaultOptions)
+	redisDataStructure, err := st.NewRedisDataStructure(rdb.DefaultOptions)
 	if err != nil {
 		panic(err)
 	}
 
 	// 初始化 BitcaskServer
 	bitcaskServer := &BitcaskServer{
-		dbs: make(map[int]*redis.RedisDataStructure),
+		dbs: make(map[int]*st.RedisDataStructure),
 	}
 	bitcaskServer.dbs[0] = redisDataStructure
 

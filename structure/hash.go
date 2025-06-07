@@ -29,7 +29,7 @@ func (rds *RedisDataStructure) HSet(key, field, value []byte) (bool, error) {
 	}
 
 	// 更新数据和元数据
-	wb := rds.db.NewWriteBatch(rdb.DefaultWriteBatchOptions)
+	wb := rds.db.NewWriteBatch(rdb.DefaultWriteBatchConfigs)
 	if !exist {
 		meta.size++
 		_ = wb.Put(key, meta.encode())
@@ -88,7 +88,7 @@ func (rds *RedisDataStructure) HDel(key, field []byte) (bool, error) {
 
 	// 更新数据和元数据
 	if exist {
-		wb := rds.db.NewWriteBatch(rdb.DefaultWriteBatchOptions)
+		wb := rds.db.NewWriteBatch(rdb.DefaultWriteBatchConfigs)
 		meta.size--
 		_ = wb.Put(key, meta.encode())
 		_ = wb.Delete(encKey)

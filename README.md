@@ -8,6 +8,8 @@ English | [简体中文](README_CN.md)
 
 RDB is a high-performance, Bitcask-based, embeddable Key-Value storage engine implemented in Go. It employs a log-structured merge (LSM-like) storage approach with multiple index type support, offering a rich set of features and functionalities.
 
+! [paper address](https://riak.com/assets/bitcask-intro.pdf)
+
 ## Features
 
 - Multiple Index Types Support
@@ -48,12 +50,12 @@ The storage engine uses a log-structured approach with the following components:
     - ART: Adaptive Radix Tree, memory-efficient
     - B+ Tree: Persistent tree-based index
 
-### 3. Main Configuration Options
+### 3. Main Configuration configs
 
 ```go
-type Options struct {
+type configs struct {
     DirPath            string      // Database directory path
-    DataFileSize       int64       // Size of data files
+    FileSize       int64       // Size of data files
     SyncWrites         bool        // Whether to sync writes
     IndexType          IndexerType // Type of index to use
     BytesPerSync       int         // Bytes to accumulate before sync
@@ -66,9 +68,10 @@ type Options struct {
 
 ```go
 // Open database
-options := rdb.DefaultOptions
-options.DirPath = "/tmp/rdb"
-db, err := rdb.Open(options)
+configs := rdbrdb.DefaultOptions
+configs.DirPath = "/tmp/rdb"
+db, err := rdbrdb.Open(configs)
+
 if err != nil {
     panic(err)
 }
@@ -84,7 +87,9 @@ value, err := db.Get([]byte("key"))
 err = db.Delete([]byte("key"))
 
 // Batch write
-batch := db.NewWriteBatch(rdb.DefaultWriteBatchOptions)
+
+batch := db.NewWriteBatch(rdbrdb.DefaultWriteBatchConfigs)
+
 batch.Put([]byte("key1"), []byte("value1"))
 batch.Put([]byte("key2"), []byte("value2"))
 err = batch.Commit()
@@ -96,8 +101,8 @@ err = batch.Commit()
 
 Support for iterating over data in key dictionary order:
 ```go
-options := rdbrdb.DefaultIteratorOptions
-iterator := db.Iterator(options)
+configs := rdbrdb.DefaultIteratorConfigs
+iterator := db.Iterator(configs)
 for iterator.Rewind(); iterator.Valid(); iterator.Next() {
     key := iterator.Key()
     value := iterator.Value()
@@ -115,7 +120,7 @@ err := db.Backup("/path/to/backup")
 
 Provides atomic batch write support:
 ```go
-batch := db.NewWriteBatch(rdbrdb.DefaultWriteBatchOptions)
+batch := db.NewWriteBatch(rdbrdb.DefaultWriteBatchConfigs)
 defer batch.Commit()
 
 batch.Put([]byte("key1"), []byte("value1"))

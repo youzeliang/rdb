@@ -2,13 +2,13 @@ package rdb
 
 import "os"
 
-// Options 配置项的结构体、用户可传递过来的配置项
-type Options struct {
+// Configs 配置项的结构体、用户可传递过来的配置项
+type Configs struct {
 	// 数据库数据目录
 	DirPath string
 
 	// 数据文件的大小
-	DataFileSize int64
+	FileSize int64
 
 	// 每次写数据是否持久化
 	SyncWrites bool
@@ -22,20 +22,20 @@ type Options struct {
 	// 启动时是否使用 MMap 加载数据
 	MMapAtStartup bool
 
-	//	数据文件合并的阈值
+	// 数据文件合并的阈值
 	DataFileMergeRatio float32
 }
 
-// IteratorOptions 索引迭代器配置项
-type IteratorOptions struct {
+// IteratorConfigs 索引迭代器配置项
+type IteratorConfigs struct {
 	// 遍历前缀为指定值的 Key，默认为空
 	Prefix []byte
 	// 是否反向遍历，默认 false 是正向
 	Reverse bool
 }
 
-// WriteBatchOptions 批量写配置项
-type WriteBatchOptions struct {
+// WriteBatchConfigs 批量写配置项
+type WriteBatchConfigs struct {
 	// 一个批次当中最大的数据量
 	MaxBatchNum uint
 
@@ -56,9 +56,9 @@ const (
 	BPlusTree
 )
 
-var DefaultOptions = Options{
+var DefaultOptions = Configs{
 	DirPath:            os.TempDir(),
-	DataFileSize:       256 * 1024 * 1024, // 256MB
+	FileSize:           256 * 1024 * 1024, // 256MB
 	SyncWrites:         false,
 	IndexType:          BTree,
 	BytesPerSync:       0,
@@ -66,12 +66,12 @@ var DefaultOptions = Options{
 	DataFileMergeRatio: 0.5,
 }
 
-var DefaultIteratorOptions = IteratorOptions{
+var DefaultIteratorConfigs = IteratorConfigs{
 	Prefix:  nil,
 	Reverse: false,
 }
 
-var DefaultWriteBatchOptions = WriteBatchOptions{
+var DefaultWriteBatchConfigs = WriteBatchConfigs{
 	MaxBatchNum: 10000,
 	SyncWrites:  true,
 }

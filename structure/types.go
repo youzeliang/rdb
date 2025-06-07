@@ -25,8 +25,8 @@ type RedisDataStructure struct {
 }
 
 // NewRedisDataStructure 初始化 Redis 数据结构服务
-func NewRedisDataStructure(options rdb.Options) (*RedisDataStructure, error) {
-	db, err := rdb.Open(options)
+func NewRedisDataStructure(configs rdb.Configs) (*RedisDataStructure, error) {
+	db, err := rdb.Open(configs)
 	if err != nil {
 		return nil, err
 	}

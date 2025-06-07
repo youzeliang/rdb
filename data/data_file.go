@@ -10,7 +10,9 @@ import (
 )
 
 var (
-	ErrInvalidCRC = errors.New("invalid crc value, log record maybe corrupted")
+	ErrInvalidCRC    = errors.New("invalid crc value, log record maybe corrupted")
+	ErrInvalidSize   = errors.New("invalid size value in log record")
+	ErrReadLogRecord = errors.New("failed to read log record")
 )
 
 const (
@@ -47,53 +49,61 @@ func newDataFile(fileName string, fileId uint32, ioType fio.FileIOType) (*DataFi
 }
 
 // ReadLogRecord 根据 offset 从数据文件中读取 LogRecord
-
 func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, int64, error) {
 
 	fileSize, err := df.IoManager.Size()
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("get file size error: %w", err)
 	}
 
-	// 如果读取的最大长度已经超过了文件的长度，则只需要读取到文件的末尾即可
+	if offset < 0 || offset >= fileSize {
+		return nil, 0, fmt.Errorf("invalid offset %d, fileSize %d", offset, fileSize)
+	}
 
+	// read header
 	var headerBytes int64 = maxLogRecordHeaderSize
 	if offset+maxLogRecordHeaderSize > fileSize {
 		headerBytes = fileSize - offset
 	}
 
-	// 读取 Header 信息
 	headerBuf, err := df.readNBytes(headerBytes, offset)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("read header error: %w", err)
 	}
 
 	header, headerSize := decodeLogRecordHeader(headerBuf)
-	// 读取到了文件末尾，直接返回 EOF 错误
 	if header == nil {
 		return nil, 0, io.EOF
 	}
+
+	// check CRC and key/value size
 	if header.crc == 0 && header.keySize == 0 && header.valueSize == 0 {
 		return nil, 0, io.EOF
 	}
-	// 取出对应的 key 和 value 的长度
+
+	if header.keySize > uint32(fileSize) || header.valueSize > uint32(fileSize) {
+		return nil, 0, ErrInvalidSize
+	}
+
 	keySize, valueSize := int64(header.keySize), int64(header.valueSize)
 	var recordSize = headerSize + keySize + valueSize
 
+	// 构造 LogRecord 对象
 	logRecord := &LogRecord{Type: header.recordType}
-	// 开始读取用户实际存储的 key/value 数据
+
+	// 读取实际的 key/value 数据
 	if keySize > 0 || valueSize > 0 {
 		kvBuf, err := df.readNBytes(keySize+valueSize, offset+headerSize)
 		if err != nil {
-			return nil, 0, err
+			return nil, 0, fmt.Errorf("read kv error: %w", err)
 		}
-		//	解出 key 和 value
+
+		// 解析 key 和 value
 		logRecord.Key = kvBuf[:keySize]
 		logRecord.Value = kvBuf[keySize:]
 	}
 
-	// 校验数据的有效性
-
+	// 校验数据完整性
 	crc := getLogRecordCRC(logRecord, headerBuf[crc32.Size:headerSize])
 	if crc != header.crc {
 		return nil, 0, ErrInvalidCRC

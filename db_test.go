@@ -35,7 +35,7 @@ func TestDB_Put(t *testing.T) {
 	opts := DefaultOptions
 	dir, _ := os.MkdirTemp("", "bitcask-go-put")
 	opts.DirPath = dir
-	opts.DataFileSize = 64 * 1024 * 1024
+	opts.FileSize = 64 * 1024 * 1024
 	db, err := Open(opts)
 	defer destroyDB(db)
 	assert.Nil(t, err)
@@ -93,7 +93,7 @@ func TestDB_Get(t *testing.T) {
 	opts := DefaultOptions
 	dir, _ := os.MkdirTemp("", "bitcask-go-get")
 	opts.DirPath = dir
-	opts.DataFileSize = 64 * 1024 * 1024
+	opts.FileSize = 64 * 1024 * 1024
 	db, err := Open(opts)
 	defer destroyDB(db)
 	assert.Nil(t, err)
@@ -163,7 +163,7 @@ func TestDB_Delete(t *testing.T) {
 	opts := DefaultOptions
 	dir, _ := os.MkdirTemp("", "bitcask-go-delete")
 	opts.DirPath = dir
-	opts.DataFileSize = 64 * 1024 * 1024
+	opts.FileSize = 64 * 1024 * 1024
 	db, err := Open(opts)
 	defer destroyDB(db)
 	assert.Nil(t, err)

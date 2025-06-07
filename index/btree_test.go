@@ -9,7 +9,7 @@ import (
 func TestBTree_Put(t *testing.T) {
 	bt := NewBTree()
 
-	res1 := bt.Put(nil, &data.Position{Fid: 1, Offset: 10})
+	res1 := bt.Put(nil, &data.Position{Fid: 1, Offset: 88})
 	assert.Nil(t, res1)
 
 	res2 := bt.Put([]byte("Rolle"), &data.Position{Fid: 1, Offset: 2})

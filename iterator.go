@@ -9,16 +9,16 @@ import (
 type Iterator struct {
 	indexIter index.Iterator // 索引迭代器
 	db        *DB
-	options   IteratorOptions
+	configs   IteratorConfigs
 }
 
 // NewIterator 初始化迭代器
-func (db *DB) NewIterator(opts IteratorOptions) *Iterator {
+func (db *DB) NewIterator(opts IteratorConfigs) *Iterator {
 	indexIter := db.index.Iterator(opts.Reverse)
 	return &Iterator{
 		db:        db,
 		indexIter: indexIter,
-		options:   opts,
+		configs:   opts,
 	}
 }
 
@@ -60,14 +60,14 @@ func (it *Iterator) Value() ([]byte, error) {
 
 func (it *Iterator) skipToNext() {
 
-	preLen := len(it.options.Prefix)
+	preLen := len(it.configs.Prefix)
 	if preLen == 0 {
 		return
 	}
 
 	for ; it.indexIter.Valid(); it.indexIter.Next() {
 		key := it.indexIter.Key()
-		if preLen <= len(key) && bytes.Compare(it.options.Prefix, key[:preLen]) == 0 {
+		if preLen <= len(key) && bytes.Compare(it.configs.Prefix, key[:preLen]) == 0 {
 			break
 		}
 	}
