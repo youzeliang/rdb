@@ -27,7 +27,7 @@ func (rds *RedisDataStructure) SAdd(key, member []byte) (bool, error) {
 
 	if !exist {
 		// 不存在的话就更新
-		wb := rds.db.NewWriteBatch(rdb.DefaultWriteBatchOptions)
+		wb := rds.db.NewWriteBatch(rdb.DefaultWriteBatchConfigs)
 		meta.size++
 		_ = wb.Put(key, meta.encode())
 		_ = wb.Put(sk.encode(), nil)
@@ -90,7 +90,7 @@ func (rds *RedisDataStructure) SRem(key, member []byte) (bool, error) {
 	}
 
 	// 更新数据和元数据
-	wb := rds.db.NewWriteBatch(rdb.DefaultWriteBatchOptions)
+	wb := rds.db.NewWriteBatch(rdb.DefaultWriteBatchConfigs)
 	meta.size--
 	_ = wb.Put(key, meta.encode())
 	_ = wb.Delete(sk.encode())

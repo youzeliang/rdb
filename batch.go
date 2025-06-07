@@ -12,21 +12,21 @@ const nonTransactionSeqNo uint64 = 0
 var txnFinKey = []byte("txn-fin")
 
 type WriteBatch struct {
-	options       WriteBatchOptions
+	configs       WriteBatchConfigs
 	mu            *sync.Mutex
 	db            *DB
 	pendingWrites map[string]*data.LogRecord // 暂存用户写入的数据
 }
 
 // NewWriteBatch 初始化 WriteBatch
-func (db *DB) NewWriteBatch(opts WriteBatchOptions) *WriteBatch {
+func (db *DB) NewWriteBatch(opts WriteBatchConfigs) *WriteBatch {
 	// 有可能是第一次进来的时候，所以使用isInitial来判断是否是第一次初始化
 	if db.config.IndexType == BPlusTree && !db.seqNoFileExists && !db.isInitial {
 		panic("cannot use write batch, seq no file not exists")
 	}
 
 	return &WriteBatch{
-		options:       opts,
+		configs:       opts,
 		mu:            new(sync.Mutex),
 		db:            db,
 		pendingWrites: make(map[string]*data.LogRecord),
@@ -87,7 +87,7 @@ func (wb *WriteBatch) Commit() error {
 		return nil
 	}
 
-	if uint(len(wb.pendingWrites)) > wb.options.MaxBatchNum {
+	if uint(len(wb.pendingWrites)) > wb.configs.MaxBatchNum {
 		return ErrExceedMaxBatchNum
 	}
 
@@ -123,7 +123,7 @@ func (wb *WriteBatch) Commit() error {
 	}
 
 	// 根据配置决定是否持久化
-	if wb.options.SyncWrites && wb.db.activeFile != nil {
+	if wb.configs.SyncWrites && wb.db.activeFile != nil {
 		if err := wb.db.activeFile.Sync(); err != nil {
 			return err
 		}

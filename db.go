@@ -24,7 +24,7 @@ const (
 
 // DB represents a key-value storage engine instance.
 type DB struct {
-	config                Options
+	config                Configs
 	mutex                 *sync.RWMutex
 	activeFile            *data.DataFile            // 当前活跃数据文件，可以用于写入
 	dataFileIDs           []int                     // 文件 id，只能在加载索引的时候使用，不能在其他的地方更新和使用
@@ -49,18 +49,18 @@ type Stat struct {
 
 // Open opens or creates a DB at the specified path with the given config.
 // If the directory does not exist, it will be created.
-func Open(options Options) (*DB, error) {
-	if err := checkOptions(options); err != nil {
+func Open(configs Configs) (*DB, error) {
+	if err := checkOptions(configs); err != nil {
 		return nil, fmt.Errorf("invalid config: %v", err)
 	}
 
 	var isInitial bool
-	if err := os.MkdirAll(options.DirPath, os.ModePerm); err != nil {
+	if err := os.MkdirAll(configs.DirPath, os.ModePerm); err != nil {
 		return nil, fmt.Errorf("failed to create directory: %v", err)
 	}
 
 	// Check if database is already in use
-	fileLock := flock.New(filepath.Join(options.DirPath, fileLockName))
+	fileLock := flock.New(filepath.Join(configs.DirPath, fileLockName))
 	hold, err := fileLock.TryLock()
 	if err != nil {
 		return nil, fmt.Errorf("failed to lock database: %v", err)
@@ -69,7 +69,7 @@ func Open(options Options) (*DB, error) {
 		return nil, ErrDatabaseIsUsing
 	}
 
-	entries, err := os.ReadDir(options.DirPath)
+	entries, err := os.ReadDir(configs.DirPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read directory: %v", err)
 	}
@@ -77,10 +77,10 @@ func Open(options Options) (*DB, error) {
 
 	// 初始化 DB 实例结构体
 	db := &DB{
-		config:        options,
+		config:        configs,
 		mutex:         new(sync.RWMutex),
 		archivedFiles: make(map[uint32]*data.DataFile),
-		index:         index.NewIndexer(options.IndexType, options.DirPath, options.SyncWrites),
+		index:         index.NewIndexer(configs.IndexType, configs.DirPath, configs.SyncWrites),
 		isInitial:     isInitial,
 		fileLock:      fileLock,
 	}
@@ -95,7 +95,7 @@ func Open(options Options) (*DB, error) {
 	}
 
 	// Handle index loading based on index type
-	if options.IndexType != BPlusTree {
+	if configs.IndexType != BPlusTree {
 		if err := db.loadIndexFromHintFile(); err != nil {
 			return nil, fmt.Errorf("failed to load hint index: %v", err)
 		}
@@ -104,7 +104,7 @@ func Open(options Options) (*DB, error) {
 			return nil, fmt.Errorf("failed to load data files index: %v", err)
 		}
 
-		if options.MMapAtStartup {
+		if configs.MMapAtStartup {
 			if err := db.resetIoType(); err != nil {
 				return nil, fmt.Errorf("failed to reset IO type: %v", err)
 			}
@@ -112,7 +112,7 @@ func Open(options Options) (*DB, error) {
 	}
 
 	// 取出当前事务序列号
-	if options.IndexType == BPlusTree {
+	if configs.IndexType == BPlusTree {
 		if err := db.loadSeqNo(); err != nil {
 			return nil, fmt.Errorf("failed to load sequence number: %v", err)
 		}
@@ -210,7 +210,7 @@ func (db *DB) Put(key []byte, value []byte) error {
 	return nil
 }
 
-// Backup 备份数据库，将数据文件拷贝到新的目录中
+// Backup backs up the database to the specified directory.
 func (db *DB) Backup(dir string) error {
 	db.mutex.RLock()
 	defer db.mutex.RUnlock()
@@ -288,7 +288,7 @@ func (db *DB) appendLogRecord(logRecord *data.LogRecord) (*data.Position, error)
 	encRecord, size := data.EncodeLogRecord(logRecord)
 
 	// Check if we need to rotate to a new data file
-	if db.activeFile.WriteOff+size > db.config.DataFileSize {
+	if db.activeFile.WriteOff+size > db.config.FileSize {
 		// Sync current file before rotation
 		if err := db.activeFile.Sync(); err != nil {
 			return nil, fmt.Errorf("failed to sync active file: %v", err)
@@ -639,14 +639,14 @@ func (db *DB) resetIoType() error {
 	return nil
 }
 
-func checkOptions(options Options) error {
-	if options.DirPath == "" {
+func checkOptions(configs Configs) error {
+	if configs.DirPath == "" {
 		return errors.New("database dir path is empty")
 	}
-	if options.DataFileSize <= 0 {
+	if configs.FileSize <= 0 {
 		return errors.New("database data file size must be greater than 0")
 	}
-	if options.DataFileMergeRatio < 0 || options.DataFileMergeRatio > 1 {
+	if configs.DataFileMergeRatio < 0 || configs.DataFileMergeRatio > 1 {
 		return errors.New("invalid merge ratio, must between 0 and 1")
 	}
 	return nil

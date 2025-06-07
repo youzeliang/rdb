@@ -24,7 +24,7 @@ const maxLogRecordHeaderSize = binary.MaxVarintLen32*2 + 5
 
 // LogRecord 写入到数据文件的记录
 
-// 之所以叫日志，是因为数据文件中的数据是追加写入的，类似日志的格式
+// LogRecord 之所以叫日志，是因为数据文件中的数据是追加写入的，类似日志的格式
 type LogRecord struct {
 	Key   []byte
 	Value []byte
@@ -59,7 +59,7 @@ type Position struct {
 //	+-------------+-------------+-------------+--------------+-------------+--------------+
 //	    4字节          1字节        变长（最大5）   变长（最大5）     变长           变长
 func EncodeLogRecord(logRecord *LogRecord) ([]byte, int64) {
-	// 初始化一个 header 部分的字节数组
+	// initializing a header with a fixed size
 	header := make([]byte, maxLogRecordHeaderSize)
 
 	// 第五个字节存储 Type
@@ -71,17 +71,18 @@ func EncodeLogRecord(logRecord *LogRecord) ([]byte, int64) {
 	index += binary.PutVarint(header[index:], int64(len(logRecord.Key)))
 	index += binary.PutVarint(header[index:], int64(len(logRecord.Value)))
 
-	// 整个 LogRecord 的大小，就是 header 的长度 + key 的长度 + value 的长度
+	// the size of the entire LogRecord is the length of the header plus the length of the key and value
 	var size = index + len(logRecord.Key) + len(logRecord.Value)
 	encBytes := make([]byte, size)
 
-	// 将 header 部分的内容拷贝过来
+	// copy the header part into the byte array
 	copy(encBytes[:index], header[:index])
-	// 将 key 和 value 数据拷贝到字节数组中
+
+	// copy the key and value data into the byte array
 	copy(encBytes[index:], logRecord.Key)
 	copy(encBytes[index+len(logRecord.Key):], logRecord.Value)
 
-	// 对整个 LogRecord 的数据进行 crc 校验
+	// check the CRC for the entire LogRecord data
 	crc := crc32.ChecksumIEEE(encBytes[4:])
 	binary.LittleEndian.PutUint32(encBytes[:4], crc)
 
@@ -90,7 +91,7 @@ func EncodeLogRecord(logRecord *LogRecord) ([]byte, int64) {
 
 // 根据字节数组拿到拿到字节数组的头部信息,在get的时候 有从ReadLogRecord方法中调用
 func decodeLogRecordHeader(buf []byte) (*logRecordHeader, int64) {
-	// 如果长度小于 4，说明数据不完整
+	// if the length is less than or equal to 4, the data is incomplete
 	if len(buf) <= 4 {
 		return nil, 0
 	}
@@ -101,13 +102,13 @@ func decodeLogRecordHeader(buf []byte) (*logRecordHeader, int64) {
 	}
 
 	var index = 5
-	// 取出实际的key size
 
+	// get the actual key size
 	keySize, n := binary.Varint(buf[index:])
 	header.keySize = uint32(keySize)
 	index += n
 
-	// 取出实际的 value size
+	// get the actual value size
 	valueSize, n := binary.Varint(buf[index:])
 	header.valueSize = uint32(valueSize)
 	index += n

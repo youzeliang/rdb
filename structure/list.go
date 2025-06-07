@@ -44,7 +44,7 @@ func (rds *RedisDataStructure) pushInner(key, element []byte, isLeft bool) (uint
 	}
 
 	// 更新数据和元数据
-	wb := rds.db.NewWriteBatch(rdb.DefaultWriteBatchOptions)
+	wb := rds.db.NewWriteBatch(rdb.DefaultWriteBatchConfigs)
 	meta.size++
 	if isLeft {
 		meta.head--
@@ -87,7 +87,7 @@ func (rds *RedisDataStructure) popInner(key []byte, isLeft bool) ([]byte, error)
 	}
 
 	// 更新数据和元数据
-	wb := rds.db.NewWriteBatch(rdb.DefaultWriteBatchOptions)
+	wb := rds.db.NewWriteBatch(rdb.DefaultWriteBatchConfigs)
 	meta.size--
 	if isLeft {
 		meta.head++

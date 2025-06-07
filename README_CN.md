@@ -1,9 +1,12 @@
 RDB 是一个用 Go 语言实现的高性能、基于Bitcask模型、可嵌入的 Key-Value 存储引擎。它采用日志结构化合并（LSM-like）的存储方式，支持多种索引类型，并提供了丰富的功能特性。
 
+! [论文地址](https://riak.com/assets/bitcask-intro.pdf)
+
+
 ## 特性
 
 - 支持多种索引类型
-    - B-Tree 索引
+    - B-Tree 索引 
     - 自适应基数树（ART）索引
     - B+ 树索引（支持持久化）
 - 高性能的读写操作
@@ -43,9 +46,9 @@ RDB 是一个用 Go 语言实现的高性能、基于Bitcask模型、可嵌入�
 ### 3. 主要配置选项
 
 ```go
-type Options struct {
+type configs struct {
     DirPath            string      // 数据库数据目录
-    DataFileSize       int64       // 数据文件的大小
+    FileSize       int64       // 数据文件的大小
     SyncWrites         bool        // 每次写数据是否持久化
     IndexType          IndexerType // 索引类型
     BytesPerSync       int         // 积累多少字节写入后进行持久化
@@ -58,9 +61,9 @@ type Options struct {
 
 ```go
 // 打开数据库
-options := rdbrdb.DefaultOptions
-options.DirPath = "/tmp/rdb"
-db, err := rdbrdb.Open(options)
+configs := rdb.DefaultOptions
+configs.DirPath = "/tmp/rdb"
+db, err := rdb.Open(configs)
 if err != nil {
     panic(err)
 }
@@ -76,7 +79,7 @@ value, err := db.Get([]byte("key"))
 err = db.Delete([]byte("key"))
 
 // 批量写入
-batch := db.NewWriteBatch(rdbrdb.DefaultWriteBatchOptions)
+batch := db.NewWriteBatch(rdb.DefaultWriteBatchConfigs)
 batch.Put([]byte("key1"), []byte("value1"))
 batch.Put([]byte("key2"), []byte("value2"))
 err = batch.Commit()
@@ -88,8 +91,8 @@ err = batch.Commit()
 
 支持按照 key 的字典序遍历数据：
 ```go
-options := rdbrdb.DefaultIteratorOptions
-iterator := db.Iterator(options)
+configs := rdb.DefaultIteratorConfigs
+iterator := db.Iterator(configs)
 for iterator.Rewind(); iterator.Valid(); iterator.Next() {
     key := iterator.Key()
     value := iterator.Value()
@@ -107,7 +110,7 @@ err := db.Backup("/path/to/backup")
 
 提供批量写入的事务支持，保证原子性：
 ```go
-batch := db.NewWriteBatch(rdbrdb.DefaultWriteBatchOptions)
+batch := db.NewWriteBatch(rdb.DefaultWriteBatchConfigs)
 defer batch.Commit()
 
 batch.Put([]byte("key1"), []byte("value1"))

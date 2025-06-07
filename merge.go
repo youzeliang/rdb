@@ -94,10 +94,10 @@ func (db *DB) Merge() error {
 		return err
 	}
 	// 打开一个新的临时 bitcask 实例
-	mergeOptions := db.config
-	mergeOptions.DirPath = mergePath
-	mergeOptions.SyncWrites = false
-	mergeDB, err := Open(mergeOptions)
+	mergeConfigs := db.config
+	mergeConfigs.DirPath = mergePath
+	mergeConfigs.SyncWrites = false
+	mergeDB, err := Open(mergeConfigs)
 	if err != nil {
 		return err
 	}

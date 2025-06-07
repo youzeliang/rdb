@@ -17,7 +17,7 @@ func TestDB_WriteBatch1(t *testing.T) {
 	assert.NotNil(t, db)
 
 	// 写数据之后并不提交
-	wb := db.NewWriteBatch(DefaultWriteBatchOptions)
+	wb := db.NewWriteBatch(DefaultWriteBatchConfigs)
 	err = wb.Put(utils.GetTestKey(1), utils.RandomValue(10))
 	assert.Nil(t, err)
 	err = wb.Delete(utils.GetTestKey(2))
@@ -35,7 +35,7 @@ func TestDB_WriteBatch1(t *testing.T) {
 	assert.Nil(t, err)
 
 	// 删除有效的数据
-	wb2 := db.NewWriteBatch(DefaultWriteBatchOptions)
+	wb2 := db.NewWriteBatch(DefaultWriteBatchConfigs)
 	err = wb2.Delete(utils.GetTestKey(1))
 	assert.Nil(t, err)
 	err = wb2.Commit()
@@ -57,7 +57,7 @@ func TestDB_WriteBatch2(t *testing.T) {
 	err = db.Put(utils.GetTestKey(1), utils.RandomValue(10))
 	assert.Nil(t, err)
 
-	wb := db.NewWriteBatch(DefaultWriteBatchOptions)
+	wb := db.NewWriteBatch(DefaultWriteBatchConfigs)
 	err = wb.Put(utils.GetTestKey(2), utils.RandomValue(10))
 	assert.Nil(t, err)
 	err = wb.Delete(utils.GetTestKey(1))
@@ -98,7 +98,7 @@ func TestDB_WriteBatch3(t *testing.T) {
 	keys := db.ListKeys()
 	t.Log(len(keys))
 	//
-	wbOpts := DefaultWriteBatchOptions
+	wbOpts := DefaultWriteBatchConfigs
 	wbOpts.MaxBatchNum = 10000000
 	wb := db.NewWriteBatch(wbOpts)
 	for i := 0; i < 500000; i++ {

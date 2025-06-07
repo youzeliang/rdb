@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/tidwall/redcon"
 	"github.com/youzeliang/rdb"
-	"github.com/youzeliang/rdb/redis"
+	st "github.com/youzeliang/rdb/structure"
 	"github.com/youzeliang/rdb/utils"
 	"strings"
 )
@@ -28,7 +28,7 @@ var supportedCommands = map[string]cmdHandler{
 
 type BitcaskClient struct {
 	server *BitcaskServer
-	db     *redis.RedisDataStructure
+	db     *st.RedisDataStructure
 }
 
 func execClientCommand(conn redcon.Conn, cmd redcon.Command) {

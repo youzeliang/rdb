@@ -15,10 +15,10 @@ var db *rdb.DB
 func init() {
 	// 初始化 DB 实例
 	var err error
-	options := rdb.DefaultOptions
+	configs := rdb.DefaultOptions
 	dir, _ := os.MkdirTemp("", "bitcask-go-http")
-	options.DirPath = dir
-	db, err = rdb.Open(options)
+	configs.DirPath = dir
+	db, err = rdb.Open(configs)
 	if err != nil {
 		panic(fmt.Sprintf("failed to open db: %v", err))
 	}
