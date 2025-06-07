@@ -71,6 +71,7 @@ type configs struct {
 configs := rdbrdb.DefaultOptions
 configs.DirPath = "/tmp/rdb"
 db, err := rdbrdb.Open(configs)
+
 if err != nil {
     panic(err)
 }
@@ -86,7 +87,9 @@ value, err := db.Get([]byte("key"))
 err = db.Delete([]byte("key"))
 
 // Batch write
+
 batch := db.NewWriteBatch(rdbrdb.DefaultWriteBatchConfigs)
+
 batch.Put([]byte("key1"), []byte("value1"))
 batch.Put([]byte("key2"), []byte("value2"))
 err = batch.Commit()
