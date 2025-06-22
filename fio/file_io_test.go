@@ -23,7 +23,7 @@ func setupTest(t *testing.T) *TestHelper {
 	return &TestHelper{path: path, fio: fio}
 }
 
-// tearDown 清理测试环境
+// tearDown cleans up the test environment
 func (h *TestHelper) tearDown() {
 	if h.fio != nil {
 		_ = h.fio.Close()

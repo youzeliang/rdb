@@ -20,7 +20,7 @@ func NewFileIOManager(path string) (*FileIO, error) {
 
 }
 
-// Read 从文件的给定位置读取对应的数据
+// Read reads data from the file at the specified offset.
 func (fi *FileIO) Read(b []byte, offset int64) (int, error) {
 	return fi.fd.ReadAt(b, offset)
 }
@@ -38,7 +38,7 @@ func (fi *FileIO) Close() error {
 	return fi.fd.Close()
 }
 
-// Size 获取到文件大小
+// Size get the size of the file
 func (fi *FileIO) Size() (int64, error) {
 	stat, err := fi.fd.Stat()
 	if err != nil {

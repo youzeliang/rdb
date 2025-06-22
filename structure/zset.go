@@ -7,14 +7,14 @@ import (
 	"math"
 )
 
-// ZAdd 将元素及其分数添加到有序集合中
+// ZAdd adds a member with a score to a sorted set.
 func (rds *RedisDataStructure) ZAdd(key []byte, score float64, member []byte) (bool, error) {
 	meta, err := rds.findMetadata(key, ZSet)
 	if err != nil {
 		return false, err
 	}
 
-	// 构造数据部分的key
+	// Construct the key for the data part
 	zk := &zsetInternalKey{
 		key:     key,
 		version: meta.version,
@@ -23,7 +23,7 @@ func (rds *RedisDataStructure) ZAdd(key []byte, score float64, member []byte) (b
 	}
 
 	var exist = true
-	// 查看是否已经存在了
+	// check if the member already exists
 	if _, err = rds.db.Get(zk.encodeWithMember()); errors.Is(err, rdb.ErrKeyNotFound) {
 		exist = false
 	}
@@ -33,7 +33,7 @@ func (rds *RedisDataStructure) ZAdd(key []byte, score float64, member []byte) (b
 		meta.size++
 		_ = wb.Put(key, meta.encode())
 	}
-	// 不管是否存在，都需要更新
+	// whether it exists or not, we need to update
 	_ = wb.Put(zk.encodeWithMember(), encodeFloat64(score))
 	_ = wb.Put(zk.encodeWithScore(), nil)
 	if err = wb.Commit(); err != nil {
@@ -42,7 +42,7 @@ func (rds *RedisDataStructure) ZAdd(key []byte, score float64, member []byte) (b
 	return !exist, nil
 }
 
-// ZScore 获取有序集合中成员的分数
+// ZScore get the score of a member in a sorted set.
 func (rds *RedisDataStructure) ZScore(key []byte, member []byte) (float64, error) {
 	meta, err := rds.findMetadata(key, ZSet)
 	if err != nil {
@@ -52,7 +52,7 @@ func (rds *RedisDataStructure) ZScore(key []byte, member []byte) (float64, error
 		return math.NaN(), nil
 	}
 
-	// 构造数据部分的key
+	// Construct the key for the data part
 	zk := &zsetInternalKey{
 		key:     key,
 		version: meta.version,
@@ -69,7 +69,7 @@ func (rds *RedisDataStructure) ZScore(key []byte, member []byte) (float64, error
 	return decodeFloat64(value), nil
 }
 
-// encodeFloat64 编码float64类型的分数
+// encodeFloat64 encodes a float64 value into a byte slice.
 func encodeFloat64(val float64) []byte {
 	buf := make([]byte, 8)
 	bits := math.Float64bits(val)
@@ -77,7 +77,7 @@ func encodeFloat64(val float64) []byte {
 	return buf
 }
 
-// decodeFloat64 解码float64类型的分数
+// decodeFloat64 decodes a byte slice into a float64 value.
 func decodeFloat64(buf []byte) float64 {
 	bits := binary.BigEndian.Uint64(buf)
 	return math.Float64frombits(bits)

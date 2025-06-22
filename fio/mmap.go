@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-// MMap (Memory Map a File) IO 类型
+// MMap (Memory Map a File) IO type
 type MMap struct {
 	readerAt *mmap.ReaderAt
 }
