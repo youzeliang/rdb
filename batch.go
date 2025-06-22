@@ -18,9 +18,10 @@ type WriteBatch struct {
 	pendingWrites map[string]*data.LogRecord // 暂存用户写入的数据
 }
 
-// NewWriteBatch 初始化 WriteBatch
+// NewWriteBatch new WriteBatch
 func (db *DB) NewWriteBatch(opts WriteBatchConfigs) *WriteBatch {
-	// 有可能是第一次进来的时候，所以使用isInitial来判断是否是第一次初始化
+
+	// maybe the first time to enter, so use isInitial to determine whether it is the first initialization
 	if db.config.IndexType == BPlusTree && !db.seqNoFileExists && !db.isInitial {
 		panic("cannot use write batch, seq no file not exists")
 	}

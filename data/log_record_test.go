@@ -1,8 +1,10 @@
 package data
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"hash/crc32"
+	"sort"
 	"testing"
 )
 
@@ -96,4 +98,55 @@ func TestGetLogRecordCrc(t *testing.T) {
 	headerBuf3 := []byte{23, 6, 58, 223, 1, 8, 26}
 	crc3 := getLogRecordCRC(record3, headerBuf3[crc32.Size:])
 	assert.Equal(t, uint32(3745121815), crc3)
+}
+
+// 给你一个整数数组 nums ，判断是否存在三元组 [nums[i], nums[j], nums[k]]
+// 满足 i != j、i != k 且 j != k ，同时还满足 nums[i] + nums[j] + nums[k] == 0 。请
+//你返回所有和为 0 且不重复的三元组。
+//
+//输入：nums = [-1,0,1,2,-1,-4]
+//输出：[[-1,-1,2],[-1,0,1]]
+
+func getThreeSum(nums []int) [][]int {
+	if len(nums) < 3 {
+		return nil
+	}
+
+	sort.Ints(nums)
+
+	var res [][]int
+	for i := 0; i < len(nums); i++ {
+		if i > 0 && nums[i] == nums[i-1] {
+			continue // 跳过重复的元素
+		}
+
+		left, right := i+1, len(nums)-1
+		for left < right {
+			sum := nums[i] + nums[left] + nums[right]
+			if sum == 0 {
+				res = append(res, []int{nums[i], nums[left], nums[right]})
+				left++
+				right--
+				for left < right && nums[left] == nums[left-1] {
+					left++ // 跳过重复的元素
+				}
+				for left < right && nums[right] == nums[right+1] {
+					right-- // 跳过重复的元素
+				}
+			} else if sum < 0 {
+				left++
+			} else {
+				right--
+			}
+		}
+	}
+
+	return res
+}
+
+func TestThreeNums(t *testing.T) {
+	nums := []int{-1, 0, 1, 2, -1, -4}
+
+	res := getThreeSum(nums)
+	fmt.Println(res)
 }

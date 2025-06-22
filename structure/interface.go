@@ -6,6 +6,8 @@ type StringCmd interface {
 	Set(key []byte, value []byte, ttl time.Duration) error
 	Get(key []byte) ([]byte, error)
 	StrLen(key []byte) (int, error)
+	SetNX(key []byte, value []byte, ttl time.Duration) (int, error)
+	Expire(key []byte, ttl time.Duration) (int, error)
 }
 
 type HashCmd interface {
@@ -30,4 +32,4 @@ type SetCmd interface {
 type ZSetCmd interface {
 	ZAdd(key []byte, score float64, member []byte) (bool, error)
 	ZScore(key []byte, member []byte) (float64, error)
-} 
+}

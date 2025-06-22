@@ -22,13 +22,12 @@ func (bt *BTree) Iterator(reverse bool) Iterator {
 	return newBTreeIterator(bt.btree, reverse)
 }
 
-// NewBTree 新建 BTree 索引结构
-
+// NewBTree new BTree structure
 func NewBTree() *BTree {
 	return &BTree{
-		// 控制叶子节点的数量
+		// control the number of items in leaf nodes
 		btree: btree.New(32),
-		// 因为并发不安全, 读操作是并发安全的
+		// because it is not thread-safe, read operations are thread-safe
 		lock: new(sync.RWMutex),
 	}
 }
