@@ -23,9 +23,9 @@ const (
 	SeqNoFileName         = "seq-no"
 )
 
-// DataFile 数据文件
+// DataFile represents a data file
 type DataFile struct {
-	FileId    uint32        // 文件id
+	FileId    uint32        // File ID
 	WriteOff  int64         // 文件写到哪个位置
 	IoManager fio.IOManager // io 读写管理
 }
@@ -36,7 +36,7 @@ func OpenDataFile(dirPath string, fileId uint32, ioType fio.FileIOType) (*DataFi
 }
 
 func newDataFile(fileName string, fileId uint32, ioType fio.FileIOType) (*DataFile, error) {
-	// 初始化 IOManager 管理器接口
+	// Initialize IOManager interface
 	ioManager, err := fio.NewIOManager(fileName, ioType)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func newDataFile(fileName string, fileId uint32, ioType fio.FileIOType) (*DataFi
 	}, nil
 }
 
-// ReadLogRecord 根据 offset 从数据文件中读取 LogRecord
+// ReadLogRecord reads a LogRecord from the data file at the given offset
 func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, int64, error) {
 
 	fileSize, err := df.IoManager.Size()
@@ -88,22 +88,22 @@ func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, int64, error) {
 	keySize, valueSize := int64(header.keySize), int64(header.valueSize)
 	var recordSize = headerSize + keySize + valueSize
 
-	// 构造 LogRecord 对象
+	// Construct LogRecord object
 	logRecord := &LogRecord{Type: header.recordType}
 
-	// 读取实际的 key/value 数据
+	// Read the actual key/value data
 	if keySize > 0 || valueSize > 0 {
 		kvBuf, err := df.readNBytes(keySize+valueSize, offset+headerSize)
 		if err != nil {
 			return nil, 0, fmt.Errorf("read kv error: %w", err)
 		}
 
-		// 解析 key 和 value
+		// Parse key and value
 		logRecord.Key = kvBuf[:keySize]
 		logRecord.Value = kvBuf[keySize:]
 	}
 
-	// 校验数据完整性
+	// Verify data integrity
 	crc := getLogRecordCRC(logRecord, headerBuf[crc32.Size:headerSize])
 	if crc != header.crc {
 		return nil, 0, ErrInvalidCRC
@@ -129,7 +129,7 @@ func (df *DataFile) Close() error {
 	return df.IoManager.Close()
 }
 
-// 指定读多少个字节
+// Read the specified number of bytes
 func (df *DataFile) readNBytes(n int64, offset int64) (b []byte, err error) {
 	b = make([]byte, n)
 	_, err = df.IoManager.Read(b, offset)
@@ -141,13 +141,13 @@ func OpenMergeFinishedFile(dirPath string) (*DataFile, error) {
 	return newDataFile(fileName, 0, fio.StandardFIO)
 }
 
-// OpenSeqNoFile 存储事务序列号的文件
+// OpenSeqNoFile opens the file that stores transaction sequence numbers
 func OpenSeqNoFile(dirPath string) (*DataFile, error) {
 	fileName := filepath.Join(dirPath, SeqNoFileName)
 	return newDataFile(fileName, 0, fio.StandardFIO)
 }
 
-// WriteHintRecord 写入索引到hint文件
+// WriteHintRecord writes the index to the hint file
 func (df *DataFile) WriteHintRecord(key []byte, pos *Position) error {
 	hintRecord := &LogRecord{
 		Key:   key,

@@ -14,7 +14,7 @@ import (
 var db *rdb.DB
 
 func init() {
-	//	初始化用于基准测试的 DB 实例
+	// Initialize the DB instance for benchmarking
 	var err error
 	configs := rdb.DefaultOptions
 	configs.DirPath = "/tmp/bitcask-go-bench"
