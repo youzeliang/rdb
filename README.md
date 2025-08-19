@@ -8,7 +8,7 @@ English | [简体中文](README_CN.md)
 
 RDB is a high-performance, Bitcask-based, embeddable Key-Value storage engine implemented in Go. It employs a log-structured merge (LSM-like) storage approach with multiple index type support, offering a rich set of features and functionalities.
 
-! [paper address](https://riak.com/assets/bitcask-intro.pdf)
+[paper address](https://riak.com/assets/bitcask-intro.pdf)
 
 ## Features
 
