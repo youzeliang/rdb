@@ -1,6 +1,6 @@
 RDB 是一个用 Go 语言实现的高性能、基于Bitcask模型、可嵌入的 Key-Value 存储引擎。它采用日志结构化合并（LSM-like）的存储方式，支持多种索引类型，并提供了丰富的功能特性。
 
-! [论文地址](https://riak.com/assets/bitcask-intro.pdf)
+[论文地址](https://riak.com/assets/bitcask-intro.pdf)
 
 
 ## 特性
