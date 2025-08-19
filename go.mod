@@ -1,6 +1,8 @@
 module github.com/youzeliang/rdb
 
-go 1.20
+go 1.23.0
+
+toolchain go1.24.6
 
 require (
 	github.com/gofrs/flock v0.12.1

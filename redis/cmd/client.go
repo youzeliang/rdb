@@ -3,11 +3,12 @@ package main
 import (
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/tidwall/redcon"
 	"github.com/youzeliang/rdb"
 	st "github.com/youzeliang/rdb/structure"
 	"github.com/youzeliang/rdb/utils"
-	"strings"
 )
 
 func newWrongNumberOfArgsError(cmd string) error {
