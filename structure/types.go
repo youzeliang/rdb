@@ -33,6 +33,26 @@ func NewRedisDataStructure(configs rdb.Configs) (*RedisDataStructure, error) {
 	return &RedisDataStructure{db: db}, nil
 }
 
+// Delete 删除 key
+func (rds *RedisDataStructure) Delete(key []byte) error {
+	return rds.db.Delete(key)
+}
+
+// Put 设置 key-value
+func (rds *RedisDataStructure) Put(key, value []byte) error {
+	return rds.db.Put(key, value)
+}
+
+// NewWriteBatch 创建批量写操作
+func (rds *RedisDataStructure) NewWriteBatch(configs rdb.WriteBatchConfigs) *rdb.WriteBatch {
+	return rds.db.NewWriteBatch(configs)
+}
+
+// NewIterator 创建迭代器
+func (rds *RedisDataStructure) NewIterator(configs rdb.IteratorConfigs) *rdb.Iterator {
+	return rds.db.NewIterator(configs)
+}
+
 func (rds *RedisDataStructure) findMetadata(key []byte, dataType RedisDataType) (*metadata, error) {
 	metaBuf, err := rds.db.Get(key)
 	if err != nil && !errors.Is(err, rdb.ErrKeyNotFound) {
