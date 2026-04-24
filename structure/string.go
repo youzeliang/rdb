@@ -3,6 +3,7 @@ package redis
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"github.com/youzeliang/rdb"
 	"time"
 )
@@ -141,4 +142,161 @@ func (rds *RedisDataStructure) Expire(key []byte, ttl time.Duration) (int, error
 		return 0, err
 	}
 	return 1, nil
+}
+
+// MGet batch gets values for multiple keys
+func (rds *RedisDataStructure) MGet(keys ...[]byte) ([][]byte, error) {
+	values := make([][]byte, len(keys))
+	for i, key := range keys {
+		value, err := rds.Get(key)
+		if err != nil {
+			return nil, err
+		}
+		values[i] = value
+	}
+	return values, nil
+}
+
+// MSet batch sets multiple key-value pairs
+func (rds *RedisDataStructure) MSet(keyValues ...[]byte) error {
+	if len(keyValues)%2 != 0 {
+		return errors.New("MSet requires an even number of arguments")
+	}
+	for i := 0; i < len(keyValues); i += 2 {
+		key := keyValues[i]
+		value := keyValues[i+1]
+		if err := rds.Set(key, value, 0); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Append appends the value to the existing string or creates a new one
+func (rds *RedisDataStructure) Append(key []byte, value []byte) (int, error) {
+	if value == nil {
+		return 0, nil
+	}
+
+	// Try to get existing value
+	oldValue, err := rds.Get(key)
+	if err != nil {
+		if errors.Is(err, rdb.ErrKeyNotFound) {
+			// Key doesn't exist, just set it
+			if err := rds.Set(key, value, 0); err != nil {
+				return 0, err
+			}
+			return len(value), nil
+		}
+		return 0, err
+	}
+
+	// Append the value
+	newValue := append(oldValue, value...)
+	if err := rds.Set(key, newValue, 0); err != nil {
+		return 0, err
+	}
+	return len(newValue), nil
+}
+
+// Incr increments the value by 1
+func (rds *RedisDataStructure) Incr(key []byte) (int64, error) {
+	return rds.incrBy(key, 1)
+}
+
+// Decr decrements the value by 1
+func (rds *RedisDataStructure) Decr(key []byte) (int64, error) {
+	return rds.incrBy(key, -1)
+}
+
+// IncrBy increments the value by the specified amount
+func (rds *RedisDataStructure) IncrBy(key []byte, num int64) (int64, error) {
+	return rds.incrBy(key, num)
+}
+
+// DecrBy decrements the value by the specified amount
+func (rds *RedisDataStructure) DecrBy(key []byte, num int64) (int64, error) {
+	return rds.incrBy(key, -num)
+}
+
+// incrBy internal method for increment/decrement
+func (rds *RedisDataStructure) incrBy(key []byte, num int64) (int64, error) {
+	value, err := rds.db.Get(key)
+	if err != nil && !errors.Is(err, rdb.ErrKeyNotFound) {
+		return 0, err
+	}
+
+	var oldVal int64 = 0
+	if errors.Is(err, rdb.ErrKeyNotFound) {
+		// Key doesn't exist, start from 0
+		oldVal = 0
+	} else {
+		// Decode and parse existing value
+		dataType := value[0]
+		if dataType != String {
+			return 0, ErrWrongTypeOperation
+		}
+		var index = 1
+		expire, n := binary.Varint(value[index:])
+		index += n
+		if expire > 0 && expire <= time.Now().UnixNano() {
+			// Key has expired, treat as non-existing
+			oldVal = 0
+		} else {
+			payload := value[index:]
+			if len(payload) == 0 {
+				oldVal = 0
+			} else {
+				oldVal, err = parseInt64(payload)
+				if err != nil {
+					return 0, errors.New("ERR value is not an integer")
+				}
+			}
+		}
+	}
+
+	newVal := oldVal + num
+	newPayload := formatInt64(newVal)
+
+	if err := rds.Set(key, newPayload, 0); err != nil {
+		return 0, err
+	}
+	return newVal, nil
+}
+
+// GetSet gets the old value and sets the new value
+func (rds *RedisDataStructure) GetSet(key []byte, value []byte) ([]byte, error) {
+	oldValue, err := rds.Get(key)
+	if err != nil {
+		return nil, err
+	}
+	if err := rds.Set(key, value, 0); err != nil {
+		return nil, err
+	}
+	return oldValue, nil
+}
+
+// parseInt64 parses a byte slice as int64
+func parseInt64(data []byte) (int64, error) {
+	var neg bool
+	if len(data) > 0 && data[0] == '-' {
+		neg = true
+		data = data[1:]
+	}
+	var val int64 = 0
+	for _, b := range data {
+		if b < '0' || b > '9' {
+			return 0, errors.New("invalid integer")
+		}
+		val = val*10 + int64(b-'0')
+	}
+	if neg {
+		val = -val
+	}
+	return val, nil
+}
+
+// formatInt64 converts int64 to byte representation
+func formatInt64(val int64) []byte {
+	return []byte(fmt.Sprintf("%d", val))
 }
