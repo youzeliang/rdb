@@ -65,7 +65,7 @@ func (db *DB) Merge() error {
 	// 打开新的活跃文件
 	if err := db.setActiveDataFile(); err != nil {
 		db.mutex.Unlock()
-		return nil
+		return err
 	}
 	// 记录最近没有参与 merge 的文件 id
 	nonMergeFileId := db.activeFile.FileId
@@ -194,7 +194,7 @@ func (db *DB) getNonMergeFileId(dirPath string) (uint32, error) {
 
 // 加载merge数据目录
 func (db *DB) loadMergeFiles() error {
-	mergePath := db.getMergeDirPath()
+	mergePath := db.getMergePath()
 	if _, err := os.Stat(mergePath); os.IsNotExist(err) {
 		return nil
 	}
@@ -254,12 +254,6 @@ func (db *DB) loadMergeFiles() error {
 		}
 	}
 	return nil
-}
-
-func (db *DB) getMergeDirPath() string {
-	dir := path.Dir(path.Clean(db.config.DirPath))
-	base := path.Base(db.config.DirPath)
-	return filepath.Join(dir, base+mergeDirName)
 }
 
 func (db *DB) loadIndexFromHintFile() error {

@@ -576,31 +576,6 @@ func (db *DB) loadIndexFromDataFiles() error {
 	return nil
 }
 
-func (db *DB) resetDataFileIoType() error {
-	if db.activeFile == nil {
-		return nil
-	}
-	if err := db.activeFile.IoManager.Close(); err != nil {
-		return err
-	}
-	ioManager, err := fio.NewFileIOManager(data.GetDataFileName(db.config.DirPath, db.activeFile.FileId))
-	if err != nil {
-		return err
-	}
-	db.activeFile.IoManager = ioManager
-	for _, file := range db.archivedFiles {
-		if err := file.IoManager.Close(); err != nil {
-			return err
-		}
-		ioManager, err := fio.NewFileIOManager(data.GetDataFileName(db.config.DirPath, file.FileId))
-		if err != nil {
-			return err
-		}
-		file.IoManager = ioManager
-	}
-	return nil
-}
-
 func (db *DB) loadSeqNo() error {
 	fileName := filepath.Join(db.config.DirPath, data.SeqNoFileName)
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {

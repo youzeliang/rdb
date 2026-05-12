@@ -7,27 +7,28 @@ import (
 	"time"
 )
 
-// Set 设置字符串的值，可以设置过期时间
-func (rds *RedisDataStructure) Set(key []byte, value []byte, ttl time.Duration) error {
+func encodeStringValue(value []byte, ttl time.Duration) ([]byte, error) {
 	if value == nil {
-		return nil
+		return nil, nil
 	}
-
-	// 编码 value : type + expire + payload
 	buf := make([]byte, binary.MaxVarintLen64+1)
 	buf[0] = String
-	var index = 1
-	var expire int64 = 0
+	idx := 1
 	if ttl != 0 {
-		expire = time.Now().Add(ttl).UnixNano()
+		idx += binary.PutVarint(buf[idx:], time.Now().Add(ttl).UnixNano())
 	}
-	index += binary.PutVarint(buf[index:], expire)
+	encValue := make([]byte, idx+len(value))
+	copy(encValue[:idx], buf[:idx])
+	copy(encValue[idx:], value)
+	return encValue, nil
+}
 
-	encValue := make([]byte, index+len(value))
-	copy(encValue[:index], buf[:index])
-	copy(encValue[index:], value)
-
-	// 调用存储接口写入数据
+// Set 设置字符串的值，可以设置过期时间
+func (rds *RedisDataStructure) Set(key []byte, value []byte, ttl time.Duration) error {
+	encValue, err := encodeStringValue(value, ttl)
+	if err != nil {
+		return err
+	}
 	return rds.db.Put(key, encValue)
 }
 
@@ -72,27 +73,16 @@ func (rds *RedisDataStructure) SetNX(key []byte, value []byte, ttl time.Duration
 
 	_, err := rds.db.Get(key)
 	if err == nil {
-		// if the key exists, return 0
 		return 0, nil
 	}
 	if errors.Is(err, rdb.ErrKeyNotFound) {
 		return 0, err
 	}
 
-	// Encode value: type + expire + payload
-	buf := make([]byte, binary.MaxVarintLen64+1)
-	buf[0] = String
-	var index = 1
-	var expire int64 = 0
-	if ttl != 0 {
-		expire = time.Now().Add(ttl).UnixNano()
+	encValue, err := encodeStringValue(value, ttl)
+	if err != nil {
+		return 0, err
 	}
-	index += binary.PutVarint(buf[index:], expire)
-
-	encValue := make([]byte, index+len(value))
-	copy(encValue[:index], buf[:index])
-	copy(encValue[index:], value)
-
 	err = rds.db.Put(key, encValue)
 	if err != nil {
 		return 0, err
@@ -112,7 +102,6 @@ func (rds *RedisDataStructure) Expire(key []byte, ttl time.Duration) (int, error
 		}
 		return 0, err
 	}
-	// Decode type and original payload
 	if len(value) < 2 {
 		return 0, nil
 	}
@@ -125,17 +114,10 @@ func (rds *RedisDataStructure) Expire(key []byte, ttl time.Duration) (int, error
 	index += n
 	payload := value[index:]
 
-	// Encode type + expire + payload
-	expire := time.Now().Add(ttl).UnixNano()
-	buf := make([]byte, binary.MaxVarintLen64+1)
-	buf[0] = String
-	idx := 1
-	idx += binary.PutVarint(buf[idx:], expire)
-
-	encValue := make([]byte, idx+len(payload))
-	copy(encValue[:idx], buf[:idx])
-	copy(encValue[idx:], payload)
-
+	encValue, err := encodeStringValue(payload, ttl)
+	if err != nil {
+		return 0, err
+	}
 	err = rds.db.Put(key, encValue)
 	if err != nil {
 		return 0, err
