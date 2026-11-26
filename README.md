@@ -68,9 +68,9 @@ type configs struct {
 
 ```go
 // Open database
-configs := rdbrdb.DefaultOptions
+configs := rdb.DefaultOptions
 configs.DirPath = "/tmp/rdb"
-db, err := rdbrdb.Open(configs)
+db, err := rdb.Open(configs)
 
 if err != nil {
     panic(err)
@@ -88,7 +88,7 @@ err = db.Delete([]byte("key"))
 
 // Batch write
 
-batch := db.NewWriteBatch(rdbrdb.DefaultWriteBatchConfigs)
+batch := db.NewWriteBatch(rdb.DefaultWriteBatchConfigs)
 
 batch.Put([]byte("key1"), []byte("value1"))
 batch.Put([]byte("key2"), []byte("value2"))
@@ -101,7 +101,7 @@ err = batch.Commit()
 
 Support for iterating over data in key dictionary order:
 ```go
-configs := rdbrdb.DefaultIteratorConfigs
+configs := rdb.DefaultIteratorConfigs
 iterator := db.Iterator(configs)
 for iterator.Rewind(); iterator.Valid(); iterator.Next() {
     key := iterator.Key()
@@ -120,7 +120,7 @@ err := db.Backup("/path/to/backup")
 
 Provides atomic batch write support:
 ```go
-batch := db.NewWriteBatch(rdbrdb.DefaultWriteBatchConfigs)
+batch := db.NewWriteBatch(rdb.DefaultWriteBatchConfigs)
 defer batch.Commit()
 
 batch.Put([]byte("key1"), []byte("value1"))
